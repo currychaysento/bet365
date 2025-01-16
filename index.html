@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Bầu Cua Tôm Cá</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0a0e12;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background: rgba(242, 162, 162, 0.878);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .balance {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .bet-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .bet {
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: rgba(22, 184, 16, 0.1);
+        }
+
+        .bet span {
+            font-size: 14px;
+            color: yellow;
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+        }
+
+        .bet.placed {
+            border-color: yellow;
+            box-shadow: 0 0 10px yellow;
+        }
+
+        .bet.correct {
+            animation: blink 0.5s infinite;
+        }
+
+        .bet.stop-blink {
+            animation: none;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                background: rgba(46, 204, 113, 0.5);
+            }
+
+            50% {
+                background: rgba(46, 204, 113, 1);
+            }
+        }
+
+        button {
+            background-color: #e74c3c;
+            color: white;
+            font-size: 18px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #c0392b;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 100px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .timer {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #f1c40f;
+        }
+
+        .history {
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            color: white;
+        }
+
+        th,
+        td {
+            border: 1px solid white;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #5e344d;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-10vh) translateX(0) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(100vh) translateX(20px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .petal {
+            position: absolute;
+            top: -10vh;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            opacity: 0.8;
+            animation: fall linear infinite;
+        }
+
+        .cherry-blossom {
+            background: pink;
+        }
+
+        .apricot-blossom {
+            background: yellow;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Game Bầu Cua Tôm Cá</h1>
+        <div class="balance">Số dư: <span id="balance">1000</span> VNĐ</div>
+
+        <label for="betAmount">Số tiền cược:</label>
+        <input type="number" id="betAmount" min="1" value="100">
+
+        <div class="bet-container">
+            <div class="bet" id="bau" onclick="placeBet('bau')">🍐 Bầu <span id="bauBet">0</span></div>
+            <div class="bet" id="cua" onclick="placeBet('cua')">🦀 Cua <span id="cuaBet">0</span></div>
+            <div class="bet" id="tom" onclick="placeBet('tom')">🦐 Tôm <span id="tomBet">0</span></div>
+            <div class="bet" id="ca" onclick="placeBet('ca')">🐟 Cá <span id="caBet">0</span></div>
+            <div class="bet" id="nai" onclick="placeBet('nai')">🦌 Nai <span id="naiBet">0</span></div>
+            <div class="bet" id="ga" onclick="placeBet('ga')">🐓 Gà <span id="gaBet">0</span></div>
+        </div>
+
+        <button onclick="playGame()">🎲 Quay Xúc Xắc</button>
+
+        <div class="result" id="result"></div>
+        <div class="timer" id="timer"></div>
+
+        <div class="history">
+            <h3>Lịch sử cược</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Kết quả</th>
+                        <th>Trạng thái</th>
+                        <th>Tiền thắng</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let balance = 1000000;
+        let bets = {
+            bau: 0,
+            cua: 0,
+            tom: 0,
+            ca: 0,
+            nai: 0,
+            ga: 0
+        };
+        let historyCount = 0;
+
+        function placeBet(choice) {
+            const betAmount = parseInt(document.getElementById("betAmount").value);
+            if (betAmount > balance || betAmount <= 0) {
+                alert("Số tiền cược không hợp lệ!");
+                return;
+            }
+
+            bets[choice] += betAmount;
+            balance -= betAmount;
+
+            document.getElementById("balance").textContent = balance;
+            document.getElementById(choice + "Bet").textContent = bets[choice];
+            document.getElementById(choice).classList.add("placed");
+        }
+
+        function playGame() {
+            if (Object.values(bets).every(value => value === 0)) {
+                alert("Bạn chưa đặt cược!");
+                return;
+            }
+
+            const options = ["bau", "cua", "tom", "ca", "nai", "ga"];
+            const winChance = 40; // Tỷ lệ thắng (40%)
+
+            let result = [];
+            const isWin = Math.random() * 100 < winChance; // Xác định người chơi thắng hay thua
+
+            if (isWin) {
+                // Người chơi thắng: Chọn kết quả từ các ô đã đặt cược
+                const placedBets = Object.keys(bets).filter(key => bets[key] > 0);
+                for (let i = 0; i < 3; i++) {
+                    result.push(placedBets[Math.floor(Math.random() * placedBets.length)]);
+                }
+            } else {
+                // Người chơi thua: Chọn kết quả ngẫu nhiên
+                for (let i = 0; i < 3; i++) {
+                    result.push(options[Math.floor(Math.random() * options.length)]);
+                }
+            }
+
+            let winnings = 0;
+            result.forEach(res => {
+                // Kiểm tra nếu người chơi đặt 3 con giống nhau
+                if (result.filter(r => r === res).length === 3) {
+                    winnings += bets[res] * 10;  // Nếu 3 con giống nhau, nhân 10 lần tiền cược
+                } else {
+                    winnings += bets[res] * 2;   // Nếu không, nhân 2 lần tiền cược
+                }
+                document.getElementById(res).classList.add("correct");
+            });
+
+            balance += winnings;
+            document.getElementById("balance").textContent = balance;
+
+            historyCount++;
+            const outcome = winnings > 0 ? "Thắng" : "Thua";
+            document.getElementById("result").textContent = `Kết quả: ${result.join(", ")} - ${outcome}!`;
+
+            // Cập nhật lịch sử cược, thêm vào đầu bảng
+            const row = `<tr>
+                <td>${historyCount}</td>
+                <td>${result.join(", ")}</td>
+                <td>${outcome}</td>
+                <td>${winnings}</td>
+            </tr>`;
+            document.getElementById("historyTable").innerHTML = row + document.getElementById("historyTable").innerHTML;
+
+            // Countdown để reset game
+            let countdown = 5;
+            document.getElementById("timer").textContent = `Đặt cược mới trong ${countdown} giây...`;
+            const interval = setInterval(() => {
+                countdown--;
+                document.getElementById("timer").textContent = `Đặt cược mới trong ${countdown} giây...`;
+                if (countdown === 0) {
+                    clearInterval(interval);
+                    resetGame(result);
+                }
+            }, 1000);
+        }
+
+        function resetGame(result) {
+            result.forEach(res => {
+                document.getElementById(res).classList.remove("correct");
+                document.getElementById(res).classList.add("stop-blink");
+            });
+
+            bets = { bau: 0, cua: 0, tom: 0, ca: 0, nai: 0, ga: 0 };
+            document.querySelectorAll(".bet span").forEach(span => span.textContent = "0");
+            document.querySelectorAll(".bet").forEach(bet => {
+                bet.classList.remove("placed", "stop-blink");
+            });
+
+            document.getElementById("timer").textContent = "Bạn có thể đặt cược!";
+        }
+        function createPetal() {
+            const petal = document.createElement('div');
+            petal.classList.add('petal');
+
+            // Xác định loại hoa: Hoa đào (hồng) hoặc hoa mai (vàng)
+            if (Math.random() > 0.5) {
+                petal.classList.add('cherry-blossom');
+            } else {
+                petal.classList.add('apricot-blossom');
+            }
+
+            document.body.appendChild(petal);
+
+            petal.style.left = Math.random() * 100 + 'vw';
+            petal.style.width = Math.random() * 15 + 5 + 'px';
+            petal.style.height = petal.style.width;
+            petal.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            petal.style.opacity = Math.random() * 0.5 + 0.5;
+
+            setTimeout(() => {
+                petal.remove();
+            }, 5000);
+        }
+
+        setInterval(createPetal, 150);
+        
+    </script>
+
+</body>
+
+</html>
